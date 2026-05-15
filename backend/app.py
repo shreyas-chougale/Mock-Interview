@@ -111,30 +111,32 @@ def init_db():
 def ai_complete(prompt: str, max_tokens: int = 1024) -> str:
     """Call Gemini API and return raw text."""
     try:
-        response = gemini_model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                max_output_tokens=max_tokens,
-                temperature=0.7,
-            )
-        )
+response = gemini_model.generate_content(
+    prompt,
+    generation_config=genai.types.GenerationConfig(
+        max_output_tokens=max_tokens,
+        temperature=0.7,
+    ),
+    request_options={"timeout": 30}
+)
         return response.text or ""
     except Exception as e:
         raise Exception(f"Gemini API error: {str(e)}") from e
 
 
 def safe_json_parse(text: str, fallback):
-    """Strip markdown fences and parse JSON; fallback on failure."""
-    cleaned = text.strip()
-    # Remove ```json ... ``` fences if present
-    if cleaned.startswith("```"):
-        cleaned = cleaned.strip("`")
-        if cleaned.lower().startswith("json"):
-            cleaned = cleaned[4:]
-        cleaned = cleaned.strip()
     try:
+        cleaned = text.strip()
+
+        if cleaned.startswith("```json"):
+            cleaned = cleaned.replace("```json", "").replace("```", "").strip()
+
+        elif cleaned.startswith("```"):
+            cleaned = cleaned.replace("```", "").strip()
+
         return json.loads(cleaned)
-    except (json.JSONDecodeError, ValueError):
+
+    except Exception:
         return fallback
 
 
@@ -142,6 +144,8 @@ def safe_json_parse(text: str, fallback):
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
+
+app.config["JSON_SORT_KEYS"] = False
 
 
 # ─── Static frontend ─────────────────────────────────────────────────────────
@@ -494,6 +498,13 @@ Return ONLY the JSON object, no other text."""
 
 # ─── Entrypoint ──────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+# Initialize DB on startup
+try:
     init_db()
+    print("Database initialized successfully.")
+except Exception as e:
+    print(f"Database initialization failed: {e}")
+
+
+if __name__ == "__main__":
     app.run(host=HOST, port=PORT, debug=False, threaded=True)
