@@ -1,6 +1,8 @@
 # Interview Coach AI
 
-PrepForge AI Mock Interview is a simple interview coaching project with a Flask backend and a static frontend.
+PrepForge is an AI-powered mock interview platform that helps users practice technical and behavioral interviews with real-time AI-generated questions, speech support, and intelligent answer evaluation.
+
+Built using Flask, PostgreSQL, Vanilla JavaScript, and Google Gemini AI.
 
 ## Project structure
 
