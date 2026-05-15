@@ -1,4 +1,4 @@
-# Interview Coach AI
+# PrepForge – AI Mock Interview Platform
 
 PrepForge is an AI-powered mock interview platform that helps users practice technical and behavioral interviews with real-time AI-generated questions, speech support, and intelligent answer evaluation.
 
