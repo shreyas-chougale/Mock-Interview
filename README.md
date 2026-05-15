@@ -4,11 +4,23 @@ PrepForge is an AI-powered mock interview platform that helps users practice tec
 
 Built using Flask, PostgreSQL, Vanilla JavaScript, and Google Gemini AI.
 
+## Features
+
+- AI-generated interview questions using Google Gemini
+- Real-time AI feedback and scoring
+- Speech-to-text answer input
+- Text-to-speech interview narration
+- PostgreSQL database integration
+- Role-based interview customization
+- Responsive modern UI
+- Detailed interview performance analysis
+
 ## Project structure
 
-- `backend/` — Flask API server, database setup, Google Gemini integration
-- `frontend/` — static HTML/CSS/JS user interface
+- `backend/` — Flask API server, PostgreSQL database setup, Google Gemini API integration
+- `frontend/` — HTML/CSS/JS user interface
 - `pyproject.toml` — Python dependency metadata
+- `deployment` — Render
 
 ## Local setup
 
