@@ -76,10 +76,16 @@ function scoreClass(score) {
 
 // ─── Voice (Web Speech API) ───────────────────────────────────────────────
 
+// ─── Voice (Web Speech API) ───────────────────────────────────────────────
+
 const Voice = (() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const supported = !!SR;
+    const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const supported = !!SpeechRecognition;
+
     let recognition = null;
+
     const state = {
         isListening: false,
         isSpeaking: false,
@@ -87,75 +93,199 @@ const Voice = (() => {
         interim: "",
         error: null,
     };
-    const listeners = new Set();
-    function notify() { listeners.forEach((cb) => cb({ ...state })); }
-    function on(cb) { listeners.add(cb); return () => listeners.delete(cb); }
 
-    function startListening() {
+    const listeners = new Set();
+
+    function notify() {
+        listeners.forEach((cb) => cb({ ...state }));
+    }
+
+    function on(cb) {
+        listeners.add(cb);
+        return () => listeners.delete(cb);
+    }
+
+    async function startListening() {
+
         if (!supported) {
-            state.error = "Speech recognition is not supported in your browser. Try Chrome or Edge.";
+            state.error =
+                "Speech Recognition is not supported in this browser. Use Chrome or Edge.";
             notify();
             return;
         }
+
+        // Stop previous instance
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch {}
+        }
+
         state.error = null;
         state.transcript = "";
         state.interim = "";
 
-        recognition = new SR();
+        recognition = new SpeechRecognition();
+
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = "en-US";
+        recognition.maxAlternatives = 1;
 
-        recognition.onstart = () => { state.isListening = true; notify(); };
-        recognition.onresult = (e) => {
-            let final = "", interim = "";
-            for (let i = e.resultIndex; i < e.results.length; i++) {
-                const r = e.results[i];
-                if (r.isFinal) final += r[0].transcript + " ";
-                else interim += r[0].transcript;
+        recognition.onstart = () => {
+            state.isListening = true;
+            notify();
+        };
+
+        recognition.onresult = (event) => {
+
+            let finalTranscript = "";
+            let interimTranscript = "";
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+
+                const transcript = event.results[i][0].transcript;
+
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript + " ";
+                } else {
+                    interimTranscript += transcript;
+                }
             }
-            if (final) state.transcript += final;
-            state.interim = interim;
+
+            if (finalTranscript) {
+                state.transcript += finalTranscript;
+            }
+
+            state.interim = interimTranscript;
+
             notify();
         };
-        recognition.onerror = (e) => {
-            if (e.error === "not-allowed") state.error = "Microphone access denied. Please allow microphone permissions and try again.";
-            else if (e.error === "no-speech") state.error = "No speech detected. Please try speaking again.";
-            else if (e.error !== "aborted") state.error = `Voice error: ${e.error}. Please try again.`;
+
+        recognition.onerror = (event) => {
+
+            console.error("Speech recognition error:", event.error);
+
+            switch (event.error) {
+
+                case "not-allowed":
+                    state.error =
+                        "Microphone permission denied. Allow microphone access.";
+                    break;
+
+                case "audio-capture":
+                    state.error =
+                        "No microphone detected on your device.";
+                    break;
+
+                case "network":
+                    state.error =
+                        "Speech recognition network error.";
+                    break;
+
+                case "no-speech":
+                    state.error =
+                        "No speech detected. Try speaking louder.";
+                    break;
+
+                default:
+                    state.error =
+                        `Speech recognition error: ${event.error}`;
+            }
+
             state.isListening = false;
+
             notify();
         };
-        recognition.onend = () => { state.isListening = false; state.interim = ""; notify(); };
-        recognition.start();
+
+        recognition.onend = () => {
+            state.isListening = false;
+            state.interim = "";
+            notify();
+        };
+
+        try {
+            recognition.start();
+        } catch (err) {
+            console.error(err);
+            state.error = "Unable to start microphone.";
+            notify();
+        }
     }
 
     function stopListening() {
-        if (recognition) { try { recognition.stop(); } catch {} recognition = null; }
+
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch {}
+        }
+
         state.isListening = false;
         state.interim = "";
+
         notify();
     }
 
     function speak(text) {
+
         if (!("speechSynthesis" in window)) return;
+
         window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = 0.92; u.pitch = 1.0; u.volume = 1.0; u.lang = "en-US";
-        u.onstart = () => { state.isSpeaking = true; notify(); };
-        u.onend = () => { state.isSpeaking = false; notify(); };
-        u.onerror = () => { state.isSpeaking = false; notify(); };
-        window.speechSynthesis.speak(u);
+
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        utterance.lang = "en-US";
+
+        utterance.onstart = () => {
+            state.isSpeaking = true;
+            notify();
+        };
+
+        utterance.onend = () => {
+            state.isSpeaking = false;
+            notify();
+        };
+
+        utterance.onerror = () => {
+            state.isSpeaking = false;
+            notify();
+        };
+
+        window.speechSynthesis.speak(utterance);
     }
+
     function stopSpeaking() {
-        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+        }
+
         state.isSpeaking = false;
+
         notify();
     }
-    function clearTranscript() { state.transcript = ""; state.interim = ""; notify(); }
 
-    return { supported, state, on, startListening, stopListening, speak, stopSpeaking, clearTranscript };
+    function clearTranscript() {
+        state.transcript = "";
+        state.interim = "";
+        notify();
+    }
+
+    return {
+        supported,
+        state,
+        on,
+        startListening,
+        stopListening,
+        speak,
+        stopSpeaking,
+        clearTranscript,
+    };
 })();
-
 
 // ─── Hash router ──────────────────────────────────────────────────────────
 
@@ -526,14 +656,26 @@ function updateInputRowState() {
 
 function updateInterviewVoiceUI() {
     // Sync transcript into textarea while listening
-    if (Voice.state.isListening) {
-        const combined = Voice.state.transcript + Voice.state.interim;
-        interviewState.textInput = combined;
-        const ta = document.getElementById("text-input");
-        if (ta) ta.value = combined;
-        const sendBtn = document.getElementById("send-btn");
-        if (sendBtn) sendBtn.disabled = !canSubmitAnswer();
+if (Voice.state.isListening) {
+    const combined = Voice.state.transcript + Voice.state.interim;
+    interviewState.textInput = combined;
+
+    const ta = document.getElementById("text-input");
+
+    if (ta) {
+        ta.value = combined;
+
+        // auto resize textarea
+        ta.style.height = "auto";
+        ta.style.height = ta.scrollHeight + "px";
     }
+
+    const sendBtn = document.getElementById("send-btn");
+
+    if (sendBtn) {
+        sendBtn.disabled = !canSubmitAnswer();
+    }
+}
 
     // Mic button visual
     const mic = document.getElementById("mic-btn");
