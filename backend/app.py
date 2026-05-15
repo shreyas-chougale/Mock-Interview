@@ -55,7 +55,11 @@ FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fr
 # ─── Database ────────────────────────────────────────────────────────────────
 
 def get_conn():
-    return psycopg.connect(DATABASE_URL, autocommit=False)
+    return psycopg.connect(
+        DATABASE_URL,
+        autocommit=False,
+        sslmode="require"
+    )
 
 
 def init_db():
